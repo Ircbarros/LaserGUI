@@ -1,3 +1,5 @@
+# Is interesting use Catkin tools
+
 from PyQt5 import QtCore, QtGui, QtWidgets
 import Logo_Vectors_rc
 import webbrowser
@@ -433,7 +435,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "LaserGUI"))
         self.HomeButton.setText(_translate("MainWindow", "Home"))
         self.DataButton.setText(_translate("MainWindow", "Data"))
         self.WiFiButton.setText(_translate("MainWindow", "Ad-hoc"))
