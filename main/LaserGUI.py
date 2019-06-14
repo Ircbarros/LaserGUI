@@ -1,9 +1,11 @@
 # Is interesting use Catkin tools
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QMessageBox, QDialog, QVBoxLayout, QMainWindow
 import Logo_Vectors_rc
 import webbrowser
 import sys
+from urllib import request
 
 
 class EmbTerminal(QtWidgets.QWidget):
@@ -16,6 +18,26 @@ class EmbTerminal(QtWidgets.QWidget):
         # Works also with urxvt:
         self.process.start('urxvt', ['-embed', str(int(self.winId()))])
         self.setGeometry(121, 462, 1160, 141)
+
+
+class InProgress(QtWidgets.QWidget):
+    def __init__(self, parent=None):
+        Error = QMessageBox()
+        Error.setText("Desculpe, opção em desenvolvimento.")
+        Error.setIcon(QMessageBox.Information)
+        Error.setWindowTitle("Atenção!")
+        Error.show()
+        Error.exec_()
+
+
+class Homebox(QtWidgets.QWidget):
+    def __init__(self, parent=None):
+        HomeInfo = QMessageBox()
+        HomeInfo.setText("Você já está na aba HOME")
+        HomeInfo.setIcon(QMessageBox.Information)
+        HomeInfo.setWindowTitle("Atenção!")
+        HomeInfo.show()
+        HomeInfo.exec_()
 
 
 class Ui_MainWindow(object):
@@ -67,6 +89,9 @@ class Ui_MainWindow(object):
         self.HomeButton.setIcon(icon)
         self.HomeButton.setIconSize(QtCore.QSize(45, 45))
         self.HomeButton.setObjectName("HomeButton")
+        # Evento de Click
+        self.HomeButton.clicked.connect(Homebox)
+        # Final do Evento de Click
         self.DataButton = QtWidgets.QCommandLinkButton(self.Base)
         self.DataButton.setGeometry(QtCore.QRect(5, 300, 110, 70))
         self.DataButton.setStyleSheet("background: rgba(29, 222, 216, 0.1);\n"
@@ -77,6 +102,9 @@ class Ui_MainWindow(object):
         self.DataButton.setIcon(icon1)
         self.DataButton.setIconSize(QtCore.QSize(45, 45))
         self.DataButton.setObjectName("DataButton")
+        # Evento de Click
+        self.DataButton.clicked.connect(InProgress)
+        #  Final do Click
         self.WiFiButton = QtWidgets.QCommandLinkButton(self.Base)
         self.WiFiButton.setGeometry(QtCore.QRect(5, 400, 110, 70))
         self.WiFiButton.setStyleSheet("background: rgba(29, 222, 216, 0.1);\n"
@@ -86,6 +114,9 @@ class Ui_MainWindow(object):
         self.WiFiButton.setIcon(icon2)
         self.WiFiButton.setIconSize(QtCore.QSize(45, 45))
         self.WiFiButton.setObjectName("WiFiButton")
+        # Evento de Click
+        self.WiFiButton.clicked.connect(InProgress)
+        #  Final do Click
         self.ConfigButton = QtWidgets.QCommandLinkButton(self.Base)
         self.ConfigButton.setGeometry(QtCore.QRect(1070, 40, 100, 50))
         self.ConfigButton.setStyleSheet("color: white;\n"
@@ -95,6 +126,9 @@ class Ui_MainWindow(object):
         self.ConfigButton.setIcon(icon3)
         self.ConfigButton.setIconSize(QtCore.QSize(30, 30))
         self.ConfigButton.setObjectName("ConfigButton")
+        # Evento de Click
+        self.ConfigButton.clicked.connect(InProgress)
+        #  Final do Click
         self.MailButton = QtWidgets.QCommandLinkButton(self.Base)
         self.MailButton.setGeometry(QtCore.QRect(1180, 40, 81, 50))
         self.MailButton.setStyleSheet("color: white;\n"
@@ -104,6 +138,9 @@ class Ui_MainWindow(object):
         self.MailButton.setIcon(icon4)
         self.MailButton.setIconSize(QtCore.QSize(30, 30))
         self.MailButton.setObjectName("MailButton")
+        # Evento de Click
+        self.MailButton.clicked.connect(InProgress)
+        #  Final do Click
         self.Simulation = QtWidgets.QGraphicsView(self.Base)
         self.Simulation.setGeometry(QtCore.QRect(121, 120, 940, 340))
         self.Simulation.setObjectName("Simulation")
