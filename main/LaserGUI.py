@@ -1,11 +1,15 @@
 # Is interesting use Catkin tools
+# -*- coding: utf-8 -*-
 
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import QMessageBox, QDialog, QVBoxLayout, QMainWindow
-import Logo_Vectors_rc
 import webbrowser
 import sys
-from urllib import request
+import os
+import Logo_Vectors_rc
+import subprocess
+import signal
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import QTimer
+from PyQt5.QtWidgets import *
 
 
 class EmbTerminal(QtWidgets.QWidget):
@@ -17,7 +21,7 @@ class EmbTerminal(QtWidgets.QWidget):
         layout.addWidget(self.terminal)
         # Works also with urxvt:
         self.process.start('urxvt', ['-embed', str(int(self.winId()))])
-        self.setGeometry(121, 462, 1160, 141)
+        self.setGeometry(90, 460, 1160, 125)
 
 
 class InProgress(QtWidgets.QWidget):
@@ -40,11 +44,64 @@ class Homebox(QtWidgets.QWidget):
         HomeInfo.exec_()
 
 
-class Ui_MainWindow(object):
+class rvizScreen(QtWidgets.QWidget):
+    def __init__(self, parent=None):
+        super(rvizScreen, self).__init__(parent)
+        self.process = QtCore.QProcess(self)
+        self.rvizScreen = QtWidgets.QWidget(self)
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(self.rvizScreen)
+        self.process.start('rviz', ['-embed', str(int(self.winId()))])
+        # Works also with urxvt:
+        # self.process.start('rviz', ['-embed', str(int(self.winId()))])
+        # self.setGeometry(121, 120, 940, 340)
+
+class Ui_MainWindow(QtWidgets.QWidget):
 
     # Abre a página da UFPB
     def UFPBClick(self):
+        self.UFPBButton.setDown(True)
+        QTimer.singleShot(5000, lambda: self.UFPBButton.setDown(False))
         webbrowser.open('http://ppgi.ci.ufpb.br/')
+
+    def RqtTool(self):
+        self.RqtButton.setDown(True)
+        QTimer.singleShot(5000, lambda: self.RqtButton.setDown(False))
+        subprocess.call('rqt', shell=False)
+
+    def RqtBagTool(self):
+        self.RqtBagButton.setDown(True)
+        QTimer.singleShot(5000, lambda: self.RqtBagButton.setDown(False))
+        subprocess.call('rqt_bag', shell=False)
+
+    def mainState(self):
+        if (self.PlayButton.isChecked() is True):
+            print('Play selecionado')
+            subprocess.call('roscore', shell=True)
+            subprocess.call('roslaunch turtlebot_bringup minimal.launch',
+                            shell=True)            
+            rvizScreen()
+        elif (self.StopButton.isChecked() is True):
+            print('Stop selecionado')
+            # os.kill(signal.CTRL_C_EVENT)
+            # process.send_signal(signal.SIGINT)
+            subprocess.call('rosnode kill -a', shell=False)
+            subprocess.call('killall -9 rosmaster', shell=False)
+        elif (self.PauseButton.isChecked() is True):
+            print('Pause selecionado')
+        elif (self.JoystickButton.isChecked() is True):
+            print('Joy selecionado')
+            subprocess.call('roslaunch turtlebot_teleop keyboard_teleop.launch',
+                            shell=True)
+    def controlState(self):
+        if (self.FuzzyButton.isChecked() is True):
+            print('Fuzzy selecionado')
+        elif (self.FelipeButton.isChecked() is True):
+            print('Felipe selecionado')
+        elif (self.OtherButton.isChecked() is True):
+            print('Augusto selecionado')
+        elif (self.PWMButton.isChecked() is True):
+            print('PWM selecionado')
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
@@ -80,6 +137,7 @@ class Ui_MainWindow(object):
         self.MenuLine.setFrameShadow(QtWidgets.QFrame.Raised)
         self.MenuLine.setFrameShape(QtWidgets.QFrame.VLine)
         self.MenuLine.setObjectName("MenuLine")
+        # Botão Home (Principal)
         self.HomeButton = QtWidgets.QCommandLinkButton(self.Base)
         self.HomeButton.setGeometry(QtCore.QRect(5, 200, 110, 70))
         self.HomeButton.setStyleSheet("background: rgba(29, 222, 216, 0.1);\n"
@@ -89,9 +147,8 @@ class Ui_MainWindow(object):
         self.HomeButton.setIcon(icon)
         self.HomeButton.setIconSize(QtCore.QSize(45, 45))
         self.HomeButton.setObjectName("HomeButton")
-        # Evento de Click
         self.HomeButton.clicked.connect(Homebox)
-        # Final do Evento de Click
+        # Botão para Data dos Sistemas Multi-Robôs
         self.DataButton = QtWidgets.QCommandLinkButton(self.Base)
         self.DataButton.setGeometry(QtCore.QRect(5, 300, 110, 70))
         self.DataButton.setStyleSheet("background: rgba(29, 222, 216, 0.1);\n"
@@ -102,9 +159,8 @@ class Ui_MainWindow(object):
         self.DataButton.setIcon(icon1)
         self.DataButton.setIconSize(QtCore.QSize(45, 45))
         self.DataButton.setObjectName("DataButton")
-        # Evento de Click
         self.DataButton.clicked.connect(InProgress)
-        #  Final do Click
+        #  Botão para Configuração de Wifi/Network
         self.WiFiButton = QtWidgets.QCommandLinkButton(self.Base)
         self.WiFiButton.setGeometry(QtCore.QRect(5, 400, 110, 70))
         self.WiFiButton.setStyleSheet("background: rgba(29, 222, 216, 0.1);\n"
@@ -114,9 +170,8 @@ class Ui_MainWindow(object):
         self.WiFiButton.setIcon(icon2)
         self.WiFiButton.setIconSize(QtCore.QSize(45, 45))
         self.WiFiButton.setObjectName("WiFiButton")
-        # Evento de Click
         self.WiFiButton.clicked.connect(InProgress)
-        #  Final do Click
+        #  Botão para Configurações
         self.ConfigButton = QtWidgets.QCommandLinkButton(self.Base)
         self.ConfigButton.setGeometry(QtCore.QRect(1070, 40, 100, 50))
         self.ConfigButton.setStyleSheet("color: white;\n"
@@ -126,9 +181,8 @@ class Ui_MainWindow(object):
         self.ConfigButton.setIcon(icon3)
         self.ConfigButton.setIconSize(QtCore.QSize(30, 30))
         self.ConfigButton.setObjectName("ConfigButton")
-        # Evento de Click
         self.ConfigButton.clicked.connect(InProgress)
-        #  Final do Click
+        #  Botão para Contato via E-mail
         self.MailButton = QtWidgets.QCommandLinkButton(self.Base)
         self.MailButton.setGeometry(QtCore.QRect(1180, 40, 81, 50))
         self.MailButton.setStyleSheet("color: white;\n"
@@ -138,12 +192,16 @@ class Ui_MainWindow(object):
         self.MailButton.setIcon(icon4)
         self.MailButton.setIconSize(QtCore.QSize(30, 30))
         self.MailButton.setObjectName("MailButton")
-        # Evento de Click
         self.MailButton.clicked.connect(InProgress)
-        #  Final do Click
-        self.Simulation = QtWidgets.QGraphicsView(self.Base)
+        #  Box de Simulação
+        ## self.Simulation = QtWidgets.QGraphicsView(self.Base)
+        ## self.Simulation.setGeometry(QtCore.QRect(121, 120, 940, 340))
+        ## self.Simulation.setObjectName("Simulation")
+        self.Simulation = QtWidgets.QTabWidget(self.Base)
         self.Simulation.setGeometry(QtCore.QRect(121, 120, 940, 340))
+        self.Simulation.setTabPosition(QtWidgets.QTabWidget.South)
         self.Simulation.setObjectName("Simulation")
+        # Botão do Logo UFPB com Link para Site
         self.UFPBButton = QtWidgets.QCommandLinkButton(self.Base)
         self.UFPBButton.setGeometry(QtCore.QRect(10, 540, 100, 50))
         self.UFPBButton.setStyleSheet("color: white;\n"
@@ -156,7 +214,31 @@ class Ui_MainWindow(object):
         self.UFPBButton.setObjectName("UFPBButton")
         # Evento de Click
         self.UFPBButton.clicked.connect(self.UFPBClick)
-        #  Final do Click
+        #  Botão para Abertura do Monitoring
+        self.MonitorButton = QtWidgets.QPushButton(self.Base)
+        self.MonitorButton.setText("Open Monitoring Tool")
+        self.MonitorButton.move(1110, 280)
+        self.MonitorButton.setStyleSheet("color: white;\n"
+                                         "background: rgba(41, 63, 71, 0.75);")
+        self.MonitorButton.setObjectName("MonitorButton")
+        self.MonitorButton.clicked.connect(self.UFPBClick)
+        #  Botão para Abertura do Logged Diagnostics
+        self.RqtBagButton = QtWidgets.QPushButton(self.Base)
+        self.RqtBagButton.setText("Create an RQT Bag File")
+        self.RqtBagButton.move(1105, 305)
+        self.RqtBagButton.setStyleSheet("color: white;\n"
+                                        "background: rgba(41, 63, 71, 0.75);")
+        self.RqtBagButton.setObjectName("RqtBagButton")
+        self.RqtBagButton.clicked.connect(self.RqtBagTool)
+        #  Botão para Abertura do RQT Dashboard
+        self.RqtButton = QtWidgets.QPushButton(self.Base)
+        self.RqtButton.setText("Create an RQT Dashboard")
+        self.RqtButton.move(1095, 330)
+        self.RqtButton.setStyleSheet("color: white;\n"
+                                     "background: rgba(41, 63, 71, 0.75);")
+        self.RqtButton.setObjectName("RuntimeButton")
+        self.RqtButton.clicked.connect(self.RqtTool)
+        # Início de Interface da GUI
         self.SuperiorLine = QtWidgets.QFrame(self.Base)
         self.SuperiorLine.setGeometry(QtCore.QRect(121, 120, 1280, 2))
         self.SuperiorLine.setStyleSheet("background: #1DDED8;")
@@ -182,7 +264,7 @@ class Ui_MainWindow(object):
         self.TerminalFrame = QtWidgets.QWidget()
         self.TerminalFrame.setObjectName("TerminalFrame")
         # Inicia o terminal no app
-        self.Terminal.addTab(EmbTerminal(), "Terminal")
+        self.Terminal.addTab(EmbTerminal(), "urvxt")
         # Final da chamada do terminal
         self.InformationFrame = QtWidgets.QFrame(self.Base)
         self.InformationFrame.setGeometry(QtCore.QRect(1063, 122, 218, 30))
@@ -196,18 +278,18 @@ class Ui_MainWindow(object):
                                             "font: 10pt \"Khmer OS System\";\n"
                                             "color: white;")
         self.InformationLabel.setObjectName("InformationLabel")
-        self.VelocityFrame = QtWidgets.QFrame(self.Base)
-        self.VelocityFrame.setGeometry(QtCore.QRect(1063, 240, 218, 30))
-        self.VelocityFrame.setStyleSheet("background: rgba(29, 222, 216, 0.1);")
-        self.VelocityFrame.setFrameShape(QtWidgets.QFrame.StyledPanel)
-        self.VelocityFrame.setFrameShadow(QtWidgets.QFrame.Raised)
-        self.VelocityFrame.setObjectName("VelocityFrame")
-        self.VelocityLabel = QtWidgets.QLabel(self.VelocityFrame)
-        self.VelocityLabel.setGeometry(QtCore.QRect(100, 10, 31, 16))
-        self.VelocityLabel.setStyleSheet("background: transparent;\n"
-                                         "font: 9pt \"Khmer OS System\";\n"
-                                         "color: white;")
-        self.VelocityLabel.setObjectName("VelocityLabel")
+        self.LogsFrame = QtWidgets.QFrame(self.Base)
+        self.LogsFrame.setGeometry(QtCore.QRect(1063, 240, 218, 30))
+        self.LogsFrame.setStyleSheet("background: rgba(29, 222, 216, 0.1);")
+        self.LogsFrame.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.LogsFrame.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.LogsFrame.setObjectName("LogsFrame")
+        self.LogsLabel = QtWidgets.QLabel(self.LogsFrame)
+        self.LogsLabel.setGeometry(QtCore.QRect(100, 10, 31, 16))
+        self.LogsLabel.setStyleSheet("background: transparent;\n"
+                                     "font: 9pt \"Khmer OS System\";\n"
+                                     "color: white;")
+        self.LogsLabel.setObjectName("LogsLabel")
         self.OrientationFrame = QtWidgets.QFrame(self.Base)
         self.OrientationFrame.setGeometry(QtCore.QRect(1063, 360, 218, 30))
         self.OrientationFrame.setStyleSheet("background: rgba(29, 222, 216, 0.1);")
@@ -238,9 +320,6 @@ class Ui_MainWindow(object):
         self.WifiValue = QtWidgets.QLCDNumber(self.Base)
         self.WifiValue.setGeometry(QtCore.QRect(1200, 200, 41, 23))
         self.WifiValue.setObjectName("WifiValue")
-        self.VelocityGraph = QtWidgets.QGraphicsView(self.Base)
-        self.VelocityGraph.setGeometry(QtCore.QRect(1063, 270, 218, 90))
-        self.VelocityGraph.setObjectName("VelocityGraph")
         self.MainControl = QtWidgets.QFrame(self.Base)
         self.MainControl.setGeometry(QtCore.QRect(210, 10, 218, 91))
         self.MainControl.setStyleSheet("background: rgba(29, 222, 216, 0.1);")
@@ -258,26 +337,40 @@ class Ui_MainWindow(object):
         self.MainControlLine.setFrameShape(QtWidgets.QFrame.HLine)
         self.MainControlLine.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.MainControlLine.setObjectName("MainControlLine")
+        # Inicio do Radio Buttons Principais
+        # Botão para Iniciar Simulação
         self.PlayButton = QtWidgets.QRadioButton(self.MainControl)
         self.PlayButton.setGeometry(QtCore.QRect(20, 30, 71, 21))
         self.PlayButton.setStyleSheet("background: transparent;\n"
                                       "color: rgb(154, 255, 152);")
         self.PlayButton.setObjectName("PlayButton")
+        self.PlayButton.setChecked(False)
+        self.PlayButton.toggled.connect(self.mainState)
+        # Botão para Joystick (Teclado)
         self.JoystickButton = QtWidgets.QRadioButton(self.MainControl)
         self.JoystickButton.setGeometry(QtCore.QRect(120, 30, 71, 21))
         self.JoystickButton.setStyleSheet("background: transparent;\n"
                                           "color: rgb(206, 255, 188);")
         self.JoystickButton.setObjectName("JoystickButton")
+        self.JoystickButton.setChecked(False)
+        self.JoystickButton.toggled.connect(self.mainState)
+        # Botão para Pausar Simulação
         self.PauseButton = QtWidgets.QRadioButton(self.MainControl)
         self.PauseButton.setGeometry(QtCore.QRect(20, 60, 71, 21))
         self.PauseButton.setStyleSheet("background: transparent;\n"
                                        "color: rgb(248, 255, 162);")
         self.PauseButton.setObjectName("PauseButton")
+        self.PauseButton.setChecked(False)
+        self.PauseButton.toggled.connect(self.mainState)
+        # Botão para Parar Simulação
         self.StopButton = QtWidgets.QRadioButton(self.MainControl)
         self.StopButton.setGeometry(QtCore.QRect(118, 60, 71, 21))
         self.StopButton.setStyleSheet("background: transparent;\n"
                                       "color: red;")
         self.StopButton.setObjectName("StopButton")
+        self.StopButton.setChecked(False)
+        self.StopButton.toggled.connect(self.mainState)
+        # Design do Box de Controladores
         self.Controller = QtWidgets.QFrame(self.Base)
         self.Controller.setGeometry(QtCore.QRect(470, 10, 218, 91))
         self.Controller.setStyleSheet("background: rgba(29, 222, 216, 0.1);")
@@ -295,6 +388,8 @@ class Ui_MainWindow(object):
         self.ControllerLine.setFrameShape(QtWidgets.QFrame.HLine)
         self.ControllerLine.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.ControllerLine.setObjectName("ControllerLine")
+        # Botões para Acionamento de Controladores
+        # Fuzzy
         self.FuzzyButton = QtWidgets.QRadioButton(self.Controller)
         self.FuzzyButton.setGeometry(QtCore.QRect(20, 30, 91, 21))
         self.FuzzyButton.setStyleSheet("background: transparent;\n"
@@ -302,6 +397,8 @@ class Ui_MainWindow(object):
                                        "\n"
                                        "")
         self.FuzzyButton.setObjectName("FuzzyButton")
+        self.FuzzyButton.setChecked(False)
+        self.FuzzyButton.toggled.connect(self.controlState)
         # Botão para Acionamento do Controle de Felipe
         self.FelipeButton = QtWidgets.QRadioButton(self.Controller)
         self.FelipeButton.setGeometry(QtCore.QRect(20, 60, 91, 21))
@@ -309,17 +406,25 @@ class Ui_MainWindow(object):
                                         "color: rgb(206, 255, 188);\n"
                                         "")
         self.FelipeButton.setObjectName("FelipeButton")
+        self.FelipeButton.setChecked(False)
+        self.FelipeButton.toggled.connect(self.controlState)
         # Botão para Acionamento do Controle de Augusto
         self.OtherButton = QtWidgets.QRadioButton(self.Controller)
         self.OtherButton.setGeometry(QtCore.QRect(110, 30, 81, 21))
         self.OtherButton.setStyleSheet("background: transparent;\n"
                                        "color: rgb(206, 255, 188);")
         self.OtherButton.setObjectName("OtherButton")
+        self.OtherButton.setChecked(False)
+        self.OtherButton.toggled.connect(self.controlState)
+        # PWM
         self.PWMButton = QtWidgets.QRadioButton(self.Controller)
         self.PWMButton.setGeometry(QtCore.QRect(111, 60, 81, 21))
         self.PWMButton.setStyleSheet("background: transparent;\n"
                                      "color: rgb(206, 255, 188);")
         self.PWMButton.setObjectName("PWMButton")
+        self.PWMButton.setChecked(False)
+        self.PWMButton.toggled.connect(self.controlState)
+        # Inicío de Radio Buttons para Seleção dos Robôs
         self.RobotSelection = QtWidgets.QFrame(self.Base)
         self.RobotSelection.setGeometry(QtCore.QRect(730, 10, 218, 51))
         self.RobotSelection.setStyleSheet("background: rgba(29, 222, 216, 0.1);")
@@ -439,18 +544,20 @@ class Ui_MainWindow(object):
         self.MailButton.raise_()
         self.Simulation.raise_()
         self.UFPBButton.raise_()
+        self.MonitorButton.raise_()
+        self.RqtBagButton.raise_()
+        self.RqtButton.raise_()
         self.SuperiorLine.raise_()
         self.InferiorLine.raise_()
         self.LateraLine.raise_()
         self.Terminal.raise_()
         self.InformationFrame.raise_()
-        self.VelocityFrame.raise_()
+        self.LogsFrame.raise_()
         self.OrientationFrame.raise_()
         self.Battery.raise_()
         self.BatteryValue.raise_()
         self.Wifi.raise_()
         self.WifiValue.raise_()
-        self.VelocityGraph.raise_()
         self.MainControl.raise_()
         self.Controller.raise_()
         self.RobotSelection.raise_()
@@ -480,7 +587,7 @@ class Ui_MainWindow(object):
         self.MailButton.setText(_translate("MainWindow", "Mail"))
         self.UFPBButton.setText(_translate("MainWindow", "PPGI UFPB"))
         self.InformationLabel.setText(_translate("MainWindow", "INFORMATIONS"))
-        self.VelocityLabel.setText(_translate("MainWindow", "LOG"))
+        self.LogsLabel.setText(_translate("MainWindow", "APPs"))
         self.OrientationLabel.setText(_translate("MainWindow", "ORIENTATION"))
         self.MainControlLabel.setText(_translate("MainWindow", "MAIN CONTROL"))
         self.PlayButton.setText(_translate("MainWindow", "Play"))
@@ -492,7 +599,8 @@ class Ui_MainWindow(object):
         self.FelipeButton.setText(_translate("MainWindow", "PBD"))
         self.OtherButton.setText(_translate("MainWindow", "PDNMPC"))
         self.PWMButton.setText(_translate("MainWindow", "PWM"))
-        self.RobotSelectionLabel.setText(_translate("MainWindow", "ROBOT SELECTION"))
+        self.RobotSelectionLabel.setText(_translate("MainWindow",
+                                                    "ROBOT SELECTION"))
         self.RobotOne.setText(_translate("MainWindow", "1"))
         self.RobotTwo.setText(_translate("MainWindow", "2"))
         self.RobotThree.setText(_translate("MainWindow", "3"))
@@ -507,10 +615,14 @@ class Ui_MainWindow(object):
         self.TeamTwo.setText(_translate("MainWindow", "2"))
 
 
-if __name__ == "__main__":
+def main():
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
     ui = Ui_MainWindow()
     ui.setupUi(MainWindow)
     MainWindow.show()
     sys.exit(app.exec_())
+
+
+if __name__ == "__main__":
+    main()
