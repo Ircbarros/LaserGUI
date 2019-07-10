@@ -6,10 +6,12 @@ import sys
 import os
 import Logo_Vectors_rc
 import subprocess
+from subprocess import call, Popen, PIPE, check_output
 import signal
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import *
+from laserSettings import *
 
 
 class EmbTerminal(QtWidgets.QWidget):
@@ -26,10 +28,10 @@ class EmbTerminal(QtWidgets.QWidget):
 
 class InProgress(QtWidgets.QWidget):
     def __init__(self, parent=None):
-        Error = QMessageBox()
-        Error.setText("Desculpe, opção em desenvolvimento.")
-        Error.setIcon(QMessageBox.Information)
-        Error.setWindowTitle("Atenção!")
+        Error = QtWidgets.QMessageBox()
+        Error.setText('Desculpe, opção em desenvolvimento.')
+        Error.setIcon(QtWidgets.QMessageBox.Information)
+        Error.setWindowTitle('Atenção!')
         Error.show()
         Error.exec_()
 
@@ -56,43 +58,101 @@ class rvizScreen(QtWidgets.QWidget):
         # self.process.start('rviz', ['-embed', str(int(self.winId()))])
         # self.setGeometry(121, 120, 940, 340)
 
-class Ui_MainWindow(QtWidgets.QWidget):
+
+class Ui_MainWindow(QtWidgets.QMainWindow):
 
     # Abre a página da UFPB
     def UFPBClick(self):
+        # Only 1 click at every 5 seconds
         self.UFPBButton.setDown(True)
         QTimer.singleShot(5000, lambda: self.UFPBButton.setDown(False))
         webbrowser.open('http://ppgi.ci.ufpb.br/')
 
+    def MonitoringTool(self):
+        self.MonitorButton.setDown(True)
+        QTimer.singleShot(5000, lambda: self.MonitorButton.setDown(False))
+        MonitorCommand = 'rosrun rqt_robot_monitor rqt_robot_monitor'
+        # Using Popen instead of Call because the first one don't block the process
+        monitorRqtProcess = subprocess.Popen(MonitorCommand, stdout=PIPE,
+                                             stdin=PIPE, shell=True)
+        MonitorProcStdout = monitorRqtProcess.communicate()[0].strip()
+        print (MonitorProcStdout)
+
     def RqtTool(self):
         self.RqtButton.setDown(True)
         QTimer.singleShot(5000, lambda: self.RqtButton.setDown(False))
-        subprocess.call('rqt', shell=False)
+        RqtCommand = 'rqt'
+        # Using Popen instead of Call because the first one don't block the process
+        RqtProcess = subprocess.Popen(RqtCommand, stdout=PIPE,
+                                      stdin=PIPE, shell=True)
+        RqtToolProcStdout = RqtProcess.communicate()[0].strip()
+        print (RqtToolProcStdout)
 
     def RqtBagTool(self):
         self.RqtBagButton.setDown(True)
         QTimer.singleShot(5000, lambda: self.RqtBagButton.setDown(False))
-        subprocess.call('rqt_bag', shell=False)
+        BagCommand = 'rqt_bag'
+        # Using Popen instead of Call because the first one don't block the process
+        BagProcess = subprocess.Popen(BagCommand, stdout=PIPE,
+                                      stdin=PIPE, shell=True)
+        BagProcStdout = BagProcess.communicate()[0].strip()
+        print (BagProcStdout)
+
+    def rqtConsoleTool(self):
+        self.rqtConsoleButton.setDown(True)
+        QTimer.singleShot(5000, lambda: self.rqtConsoleButton.setDown(False))
+        rqtConsoleCommand = 'rqt_console'
+        # Using Popen instead of Call because the first one don't block the process
+        rqtConsoleProcess = subprocess.Popen(rqtConsoleCommand, stdout=PIPE,
+                                             stdin=PIPE, shell=True)
+        rqtConsoleProcStdout = rqtConsoleProcess.communicate()[0].strip()
+        print (rqtConsoleProcStdout)
+
+    def rqtLoggerTool(self):
+        self.rqtLoggerButton.setDown(True)
+        QTimer.singleShot(5000, lambda: self.rqtLoggerButton.setDown(False))
+        rqtLoggerCommand = 'rosrun rqt_logger_level rqt_logger_level'
+        # Using Popen instead of Call because the first one don't block the process
+        rqtLoggerProcess = subprocess.Popen(rqtLoggerCommand, stdout=PIPE,
+                                            stdin=PIPE, shell=True)
+        rqtLoggerProcStdout = rqtLoggerProcess.communicate()[0].strip()
+        print (rqtLoggerProcStdout)
 
     def mainState(self):
         if (self.PlayButton.isChecked() is True):
             print('Play selecionado')
-            subprocess.call('roscore', shell=True)
-            subprocess.call('roslaunch turtlebot_bringup minimal.launch',
-                            shell=True)            
-            rvizScreen()
+
         elif (self.StopButton.isChecked() is True):
             print('Stop selecionado')
-            # os.kill(signal.CTRL_C_EVENT)
-            # process.send_signal(signal.SIGINT)
-            subprocess.call('rosnode kill -a', shell=False)
-            subprocess.call('killall -9 rosmaster', shell=False)
+            self.RqtBagButton.setDown(True)
+            killRosNode = 'rosnode kill -a'
+            killRosMaster = 'killall -9 rosmaster'
+            killRosCore = 'killall -9 roscore'
+            QTimer.singleShot(5000, lambda: self.RqtBagButton.setDown(False))
+            # Using Popen instead of Call because the first one don't block the process
+            coreKillProcess = subprocess.Popen(killRosCore, stdout=PIPE,
+                                               stdin=PIPE, shell=True)
+            nodeKillProcess = subprocess.Popen(killRosNode, stdout=PIPE,
+                                               stdin=PIPE, shell=True)
+            masterKillProcess = subprocess.Popen(killRosMaster, stdout=PIPE,
+                                                 stdin=PIPE, shell=True)
+            stopCoreProcStdout = coreKillProcess.communicate()[0].strip()
+            stopNodeProcStdout = nodeKillProcess.communicate()[0].strip()
+            stopMasterProcStdout = masterKillProcess.communicate()[0].strip()
+            print (stopCoreProcStdout, stopNodeProcStdout,
+                   stopMasterProcStdout)
+
         elif (self.PauseButton.isChecked() is True):
             print('Pause selecionado')
+
         elif (self.JoystickButton.isChecked() is True):
             print('Joy selecionado')
-            subprocess.call('roslaunch turtlebot_teleop keyboard_teleop.launch',
-                            shell=True)
+            joySelection = 'roslaunch turtlebot_teleop keyboard_teleop.launch'
+            joyProcess = subprocess.Popen(joySelection, stdout=PIPE,
+                                          stdin=PIPE, shell=True)
+            joyProcStdout = joyProcess.communicate()[0].strip()
+            print (joyProcStdout)
+
     def controlState(self):
         if (self.FuzzyButton.isChecked() is True):
             print('Fuzzy selecionado')
@@ -177,11 +237,13 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.ConfigButton.setStyleSheet("color: white;\n"
                                         "background: rgba(41, 63, 71, 0.75);")
         icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap(":/newPrefix/Config.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon3.addPixmap(QtGui.QPixmap(":/newPrefix/Config.png"),
+                        QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.ConfigButton.setIcon(icon3)
         self.ConfigButton.setIconSize(QtCore.QSize(30, 30))
         self.ConfigButton.setObjectName("ConfigButton")
-        self.ConfigButton.clicked.connect(InProgress)
+        self.ConfigButton.setToolTip('Configure Enviroment Variables')
+        self.ConfigButton.clicked.connect(laserSettings)
         #  Botão para Contato via E-mail
         self.MailButton = QtWidgets.QCommandLinkButton(self.Base)
         self.MailButton.setGeometry(QtCore.QRect(1180, 40, 81, 50))
@@ -192,11 +254,12 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.MailButton.setIcon(icon4)
         self.MailButton.setIconSize(QtCore.QSize(30, 30))
         self.MailButton.setObjectName("MailButton")
+        self.MailButton.setToolTip('Contact the LASER Laboratory')
         self.MailButton.clicked.connect(InProgress)
         #  Box de Simulação
-        ## self.Simulation = QtWidgets.QGraphicsView(self.Base)
-        ## self.Simulation.setGeometry(QtCore.QRect(121, 120, 940, 340))
-        ## self.Simulation.setObjectName("Simulation")
+        # self.Simulation = QtWidgets.QGraphicsView(self.Base)
+        # self.Simulation.setGeometry(QtCore.QRect(121, 120, 940, 340))
+        # self.Simulation.setObjectName("Simulation")
         self.Simulation = QtWidgets.QTabWidget(self.Base)
         self.Simulation.setGeometry(QtCore.QRect(121, 120, 940, 340))
         self.Simulation.setTabPosition(QtWidgets.QTabWidget.South)
@@ -217,26 +280,32 @@ class Ui_MainWindow(QtWidgets.QWidget):
         #  Botão para Abertura do Monitoring
         self.MonitorButton = QtWidgets.QPushButton(self.Base)
         self.MonitorButton.setText("Open Monitoring Tool")
-        self.MonitorButton.move(1110, 280)
+        self.MonitorButton.move(1107, 280)
         self.MonitorButton.setStyleSheet("color: white;\n"
                                          "background: rgba(41, 63, 71, 0.75);")
         self.MonitorButton.setObjectName("MonitorButton")
-        self.MonitorButton.clicked.connect(self.UFPBClick)
+        self.MonitorButton.setToolTip('Open the Robot Monitoring Tool ' +
+                                      '(Make sure diagnostic_aggregator is runing!)')
+        self.MonitorButton.clicked.connect(self.MonitoringTool)
         #  Botão para Abertura do Logged Diagnostics
         self.RqtBagButton = QtWidgets.QPushButton(self.Base)
         self.RqtBagButton.setText("Create an RQT Bag File")
-        self.RqtBagButton.move(1105, 305)
+        self.RqtBagButton.move(1102, 305)
         self.RqtBagButton.setStyleSheet("color: white;\n"
                                         "background: rgba(41, 63, 71, 0.75);")
         self.RqtBagButton.setObjectName("RqtBagButton")
+        self.RqtBagButton.setToolTip('Open the Rosbag Tool ' +
+                                     '(Make sure roscore and rosmaster is runing!)')
         self.RqtBagButton.clicked.connect(self.RqtBagTool)
         #  Botão para Abertura do RQT Dashboard
         self.RqtButton = QtWidgets.QPushButton(self.Base)
         self.RqtButton.setText("Create an RQT Dashboard")
-        self.RqtButton.move(1095, 330)
+        self.RqtButton.move(1094, 330)
         self.RqtButton.setStyleSheet("color: white;\n"
                                      "background: rgba(41, 63, 71, 0.75);")
         self.RqtButton.setObjectName("RuntimeButton")
+        self.RqtButton.setToolTip('Open the RQT Dashboard or a Saved Perspective ' +
+                                  '(Make sure roscore and rosmaster is runing!)')
         self.RqtButton.clicked.connect(self.RqtTool)
         # Início de Interface da GUI
         self.SuperiorLine = QtWidgets.QFrame(self.Base)
@@ -266,60 +335,64 @@ class Ui_MainWindow(QtWidgets.QWidget):
         # Inicia o terminal no app
         self.Terminal.addTab(EmbTerminal(), "urvxt")
         # Final da chamada do terminal
-        self.InformationFrame = QtWidgets.QFrame(self.Base)
-        self.InformationFrame.setGeometry(QtCore.QRect(1063, 122, 218, 30))
-        self.InformationFrame.setStyleSheet("background: rgba(29, 222, 216, 0.1);")
-        self.InformationFrame.setFrameShape(QtWidgets.QFrame.StyledPanel)
-        self.InformationFrame.setFrameShadow(QtWidgets.QFrame.Raised)
-        self.InformationFrame.setObjectName("InformationFrame")
-        self.InformationLabel = QtWidgets.QLabel(self.InformationFrame)
-        self.InformationLabel.setGeometry(QtCore.QRect(60, 9, 101, 16))
-        self.InformationLabel.setStyleSheet("background: transparent;\n"
-                                            "font: 10pt \"Khmer OS System\";\n"
-                                            "color: white;")
-        self.InformationLabel.setObjectName("InformationLabel")
-        self.LogsFrame = QtWidgets.QFrame(self.Base)
-        self.LogsFrame.setGeometry(QtCore.QRect(1063, 240, 218, 30))
-        self.LogsFrame.setStyleSheet("background: rgba(29, 222, 216, 0.1);")
-        self.LogsFrame.setFrameShape(QtWidgets.QFrame.StyledPanel)
-        self.LogsFrame.setFrameShadow(QtWidgets.QFrame.Raised)
-        self.LogsFrame.setObjectName("LogsFrame")
-        self.LogsLabel = QtWidgets.QLabel(self.LogsFrame)
-        self.LogsLabel.setGeometry(QtCore.QRect(100, 10, 31, 16))
-        self.LogsLabel.setStyleSheet("background: transparent;\n"
-                                     "font: 9pt \"Khmer OS System\";\n"
-                                     "color: white;")
-        self.LogsLabel.setObjectName("LogsLabel")
-        self.OrientationFrame = QtWidgets.QFrame(self.Base)
-        self.OrientationFrame.setGeometry(QtCore.QRect(1063, 360, 218, 30))
-        self.OrientationFrame.setStyleSheet("background: rgba(29, 222, 216, 0.1);")
-        self.OrientationFrame.setFrameShape(QtWidgets.QFrame.StyledPanel)
-        self.OrientationFrame.setFrameShadow(QtWidgets.QFrame.Raised)
-        self.OrientationFrame.setObjectName("OrientationFrame")
-        self.OrientationLabel = QtWidgets.QLabel(self.OrientationFrame)
-        self.OrientationLabel.setGeometry(QtCore.QRect(70, 9, 81, 16))
-        self.OrientationLabel.setStyleSheet("background: transparent;\n"
-                                            "font: 9pt \"Khmer OS System\";\n"
-                                            "color: white;")
-        self.OrientationLabel.setObjectName("OrientationLabel")
-        self.Battery = QtWidgets.QFrame(self.Base)
-        self.Battery.setGeometry(QtCore.QRect(1110, 170, 41, 31))
-        self.Battery.setStyleSheet("image: url(:/newPrefix/BatteryHigh.png);")
-        self.Battery.setFrameShape(QtWidgets.QFrame.StyledPanel)
-        self.Battery.setFrameShadow(QtWidgets.QFrame.Raised)
-        self.Battery.setObjectName("Battery")
-        self.BatteryValue = QtWidgets.QLCDNumber(self.Base)
-        self.BatteryValue.setGeometry(QtCore.QRect(1110, 200, 41, 23))
-        self.BatteryValue.setObjectName("BatteryValue")
-        self.Wifi = QtWidgets.QFrame(self.Base)
-        self.Wifi.setGeometry(QtCore.QRect(1200, 170, 41, 31))
-        self.Wifi.setStyleSheet("image: url(:/newPrefix/InternetSignalHigh.png);")
-        self.Wifi.setFrameShape(QtWidgets.QFrame.StyledPanel)
-        self.Wifi.setFrameShadow(QtWidgets.QFrame.Raised)
-        self.Wifi.setObjectName("Wifi")
-        self.WifiValue = QtWidgets.QLCDNumber(self.Base)
-        self.WifiValue.setGeometry(QtCore.QRect(1200, 200, 41, 23))
-        self.WifiValue.setObjectName("WifiValue")
+        # Início dos Frames e Labels Graph, Tolls e Debug
+        self.graphSettingsFrame = QtWidgets.QFrame(self.Base)
+        self.graphSettingsFrame.setGeometry(QtCore.QRect(1063, 122, 218, 30))
+        self.graphSettingsFrame.setStyleSheet("background: rgba(29, 222, 216, 0.1);")
+        self.graphSettingsFrame.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.graphSettingsFrame.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.graphSettingsFrame.setObjectName("graphSettingsFrame")
+        self.graphSettingsLabel = QtWidgets.QLabel(self.graphSettingsFrame)
+        self.graphSettingsLabel.setGeometry(QtCore.QRect(53, 9, 115, 20))
+        self.graphSettingsLabel.setStyleSheet("background: transparent;\n"
+                                              "font: 10pt \"Khmer OS System\";\n"
+                                              "color: white;")
+        self.graphSettingsLabel.setObjectName("graphSettingsLabel")
+        self.toolsFrame = QtWidgets.QFrame(self.Base)
+        self.toolsFrame.setGeometry(QtCore.QRect(1063, 240, 218, 30))
+        self.toolsFrame.setStyleSheet("background: rgba(29, 222, 216, 0.1);")
+        self.toolsFrame.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.toolsFrame.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.toolsFrame.setObjectName("toolsFrame")
+        self.toolsLabel = QtWidgets.QLabel(self.toolsFrame)
+        self.toolsLabel.setGeometry(QtCore.QRect(88, 10, 40, 16))
+        self.toolsLabel.setStyleSheet("background: transparent;\n"
+                                      "font: 9pt \"Khmer OS System\";\n"
+                                      "color: white;")
+        self.toolsLabel.setObjectName("toolsLabel")
+        self.debugFrame = QtWidgets.QFrame(self.Base)
+        self.debugFrame.setGeometry(QtCore.QRect(1063, 360, 218, 30))
+        self.debugFrame.setStyleSheet("background: rgba(29, 222, 216, 0.1);")
+        self.debugFrame.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.debugFrame.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.debugFrame.setObjectName("debugFrame")
+        self.debugLabel = QtWidgets.QLabel(self.debugFrame)
+        self.debugLabel.setGeometry(QtCore.QRect(65, 9, 90, 16))
+        self.debugLabel.setStyleSheet("background: transparent;\n"
+                                      "font: 9pt \"Khmer OS System\";\n"
+                                      "color: white;")
+        self.debugLabel.setObjectName("debugLabel")
+        #  Botão para Abertura do RQT Console
+        self.rqtConsoleButton = QtWidgets.QPushButton(self.Base)
+        self.rqtConsoleButton.setText("Open RQT Console")
+        self.rqtConsoleButton.move(1115, 400)
+        self.rqtConsoleButton.setStyleSheet("color: white;\n"
+                                            "background: rgba(41, 63, 71, 0.75);")
+        self.rqtConsoleButton.setObjectName("rqtConsoleButton")
+        self.rqtConsoleButton.setToolTip('Filter messages by node, text and more.')
+        self.rqtConsoleButton.clicked.connect(self.rqtConsoleTool)
+        #  Botão para Abertura do RQT LOGGER LEVEL
+        self.rqtLoggerButton = QtWidgets.QPushButton(self.Base)
+        self.rqtLoggerButton.setText("Open RQT Logger Level")
+        self.rqtLoggerButton.move(1100, 427)
+        self.rqtLoggerButton.setStyleSheet("color: white;\n"
+                                           "background: rgba(41, 63, 71, 0.75);")
+        self.rqtLoggerButton.setObjectName("rqtLoggerButton")
+        self.rqtLoggerButton.setToolTip('See messages marked as DEBUG')
+        self.rqtLoggerButton.clicked.connect(self.rqtLoggerTool)
+
+        # Final dos Frames e Graph, Tools e Debug
+        # Início do Frame e Label do MAIN CONTROL
         self.MainControl = QtWidgets.QFrame(self.Base)
         self.MainControl.setGeometry(QtCore.QRect(210, 10, 218, 91))
         self.MainControl.setStyleSheet("background: rgba(29, 222, 216, 0.1);")
@@ -457,56 +530,11 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.RobotThree.setStyleSheet("background: transparent;\n"
                                       "color: rgb(206, 255, 188);")
         self.RobotThree.setObjectName("RobotThree")
-        self.RobotThree_2 = QtWidgets.QRadioButton(self.RobotSelection)
-        self.RobotThree_2.setGeometry(QtCore.QRect(156, 27, 31, 21))
-        self.RobotThree_2.setStyleSheet("background: transparent;\n"
-                                        "color: rgb(206, 255, 188);")
-        self.RobotThree_2.setObjectName("RobotThree_2")
-        self.XValue = QtWidgets.QLCDNumber(self.Base)
-        self.XValue.setGeometry(QtCore.QRect(1090, 400, 31, 23))
-        self.XValue.setObjectName("XValue")
-        self.XLabel = QtWidgets.QLabel(self.Base)
-        self.XLabel.setGeometry(QtCore.QRect(1070, 405, 21, 16))
-        self.XLabel.setStyleSheet("background: transparent;\n"
-                                  "font: 11pt \"Sans Serif\";\n"
-                                  "color: red;")
-        self.XLabel.setObjectName("XLabel")
-        self.YValue = QtWidgets.QLCDNumber(self.Base)
-        self.YValue.setGeometry(QtCore.QRect(1170, 400, 31, 23))
-        self.YValue.setObjectName("YValue")
-        self.YLabel = QtWidgets.QLabel(self.Base)
-        self.YLabel.setGeometry(QtCore.QRect(1150, 405, 21, 16))
-        self.YLabel.setStyleSheet("background: transparent;\n"
-                                  "font: 11pt \"Sans Serif\";\n"
-                                  "color: yellow;")
-        self.YLabel.setObjectName("YLabel")
-        self.ZValue = QtWidgets.QLCDNumber(self.Base)
-        self.ZValue.setGeometry(QtCore.QRect(1240, 400, 31, 23))
-        self.ZValue.setObjectName("ZValue")
-        self.ZLabel = QtWidgets.QLabel(self.Base)
-        self.ZLabel.setGeometry(QtCore.QRect(1220, 405, 21, 16))
-        self.ZLabel.setStyleSheet("background: transparent;\n"
-                                  "font: 11pt \"Sans Serif\";\n"
-                                  "color: green;")
-        self.ZLabel.setObjectName("ZLabel")
-        self.PitchValue = QtWidgets.QLCDNumber(self.Base)
-        self.PitchValue.setGeometry(QtCore.QRect(1125, 430, 31, 23))
-        self.PitchValue.setObjectName("PitchValue")
-        self.PitchLabel = QtWidgets.QLabel(self.Base)
-        self.PitchLabel.setGeometry(QtCore.QRect(1080, 435, 51, 16))
-        self.PitchLabel.setStyleSheet("background: transparent;\n"
-                                      "font: 11pt \"Sans Serif\";\n"
-                                      "color: rgb(206, 255, 188);")
-        self.PitchLabel.setObjectName("PitchLabel")
-        self.YallValue = QtWidgets.QLabel(self.Base)
-        self.YallValue.setGeometry(QtCore.QRect(1185, 435, 41, 16))
-        self.YallValue.setStyleSheet("background: transparent;\n"
-                                     "font: 11pt \"Sans Serif\";\n"
+        self.RobotFour = QtWidgets.QRadioButton(self.RobotSelection)
+        self.RobotFour.setGeometry(QtCore.QRect(156, 27, 31, 21))
+        self.RobotFour.setStyleSheet("background: transparent;\n"
                                      "color: rgb(206, 255, 188);")
-        self.YallValue.setObjectName("YallValue")
-        self.YalNumber = QtWidgets.QLCDNumber(self.Base)
-        self.YalNumber.setGeometry(QtCore.QRect(1230, 430, 31, 23))
-        self.YalNumber.setObjectName("YalNumber")
+        self.RobotFour.setObjectName("RobotFour")
         self.TeamSelection = QtWidgets.QFrame(self.Base)
         self.TeamSelection.setGeometry(QtCore.QRect(730, 60, 218, 41))
         self.TeamSelection.setStyleSheet("background: rgba(29, 222, 216, 0.1);")
@@ -535,8 +563,9 @@ class Ui_MainWindow(QtWidgets.QWidget):
                                    "color: rgb(206, 255, 188);")
         self.TeamTwo.setObjectName("TeamTwo")
         self.MenuFrame.raise_()
-        self.LogoFrame.raise_()
+        self.toolsFrame.raise_()
         self.MenuLine.raise_()
+        self.LogoFrame.raise_()
         self.HomeButton.raise_()
         self.DataButton.raise_()
         self.WiFiButton.raise_()
@@ -547,30 +576,18 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.MonitorButton.raise_()
         self.RqtBagButton.raise_()
         self.RqtButton.raise_()
+        self.rqtConsoleButton.raise_()
+        self.rqtLoggerButton.raise_()
         self.SuperiorLine.raise_()
         self.InferiorLine.raise_()
         self.LateraLine.raise_()
         self.Terminal.raise_()
-        self.InformationFrame.raise_()
-        self.LogsFrame.raise_()
-        self.OrientationFrame.raise_()
-        self.Battery.raise_()
-        self.BatteryValue.raise_()
-        self.Wifi.raise_()
-        self.WifiValue.raise_()
+        self.graphSettingsFrame.raise_()
+        self.toolsFrame.raise_()
+        self.debugFrame.raise_()
         self.MainControl.raise_()
         self.Controller.raise_()
         self.RobotSelection.raise_()
-        self.XValue.raise_()
-        self.XLabel.raise_()
-        self.YValue.raise_()
-        self.YLabel.raise_()
-        self.ZValue.raise_()
-        self.ZLabel.raise_()
-        self.PitchValue.raise_()
-        self.PitchLabel.raise_()
-        self.YallValue.raise_()
-        self.YalNumber.raise_()
         self.TeamSelection.raise_()
         MainWindow.setCentralWidget(self.Base)
 
@@ -586,9 +603,10 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.ConfigButton.setText(_translate("MainWindow", "Config"))
         self.MailButton.setText(_translate("MainWindow", "Mail"))
         self.UFPBButton.setText(_translate("MainWindow", "PPGI UFPB"))
-        self.InformationLabel.setText(_translate("MainWindow", "INFORMATIONS"))
-        self.LogsLabel.setText(_translate("MainWindow", "APPs"))
-        self.OrientationLabel.setText(_translate("MainWindow", "ORIENTATION"))
+        self.graphSettingsLabel.setText(_translate("MainWindow",
+                                                   "GRAPH SETTINGS"))
+        self.toolsLabel.setText(_translate("MainWindow", "TOOLS"))
+        self.debugLabel.setText(_translate("MainWindow", "DEBUG & TEST"))
         self.MainControlLabel.setText(_translate("MainWindow", "MAIN CONTROL"))
         self.PlayButton.setText(_translate("MainWindow", "Play"))
         self.JoystickButton.setText(_translate("MainWindow", "Joystick"))
@@ -604,12 +622,7 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.RobotOne.setText(_translate("MainWindow", "1"))
         self.RobotTwo.setText(_translate("MainWindow", "2"))
         self.RobotThree.setText(_translate("MainWindow", "3"))
-        self.RobotThree_2.setText(_translate("MainWindow", "4"))
-        self.XLabel.setText(_translate("MainWindow", "X:"))
-        self.YLabel.setText(_translate("MainWindow", "Y:"))
-        self.ZLabel.setText(_translate("MainWindow", "Z:"))
-        self.PitchLabel.setText(_translate("MainWindow", "Pitch:"))
-        self.YallValue.setText(_translate("MainWindow", "Yall:"))
+        self.RobotFour.setText(_translate("MainWindow", "4"))
         self.TeamSelectionName.setText(_translate("MainWindow", "TEAM:"))
         self.TeamOne.setText(_translate("MainWindow", "1"))
         self.TeamTwo.setText(_translate("MainWindow", "2"))
