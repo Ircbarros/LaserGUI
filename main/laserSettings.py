@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'laserSettings.ui'
-#
-# Created by: PyQt5 UI code generator 5.9.2
-#
-# WARNING! All changes made in this file will be lost!
-
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtCore import pyqtSlot                                                                                                                                                                                                                                                                                                           
+import paramiko
+import os
 import sys
+from paramiko import SSHClient
+from paramiko import SSHException
+try:
+    import xml.etree.cElementTree as et
+except ImportError:
+    import xml.etree.ElementTree as et
 
 
 class laserSettings(QDialog):
@@ -174,6 +176,16 @@ class laserSettings(QDialog):
         self.rosRootLabel.setGeometry(QtCore.QRect(5, 112, 81, 16))
         self.rosRootLabel.setStyleSheet("color: rgb(199, 199, 199);")
         self.rosRootLabel.setObjectName("rosRootLabel")
+        # #  Botão para teste de conexão SSH
+        # self.sshTest = QtWidgets.QPushButton(self.othersTab)
+        # self.sshTest.setText("Test SSH Connection")
+        # self.sshTest.move(105, 200)
+        # self.sshTest.setStyleSheet("color: white;\n"
+        #                            "background: rgba(41, 63, 71, 0.75);")
+        # self.sshTest.setObjectName("RqtBagButton")
+        # self.sshTest.setToolTip('Test the SSH Connection')
+        # self.sshTest.clicked.connect(self.sshTest)
+        # Botão DEFAULT
         self.defaultButtonTab2 = QtWidgets.QPushButton(self.othersTab)
         self.defaultButtonTab2.setGeometry(QtCore.QRect(40, 355, 80, 23))
         self.defaultButtonTab2.setStyleSheet("color: rgb(199, 199, 199);")
@@ -197,16 +209,17 @@ class laserSettings(QDialog):
         self.rosSourceLabel.setBuddy(self.masterIP)
         self.rosETCDirectoryLabel.setBuddy(self.hostname)
         self.rosRootLabel.setBuddy(self.nameSpace)
-
         self.retranslateUi(envConfigDialog)
         self.tabbedConfig.setCurrentIndex(0)
         # Botões de OK e CANCEL da TAB 1
-        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.accepted.connect(self.okButton)
         self.buttonBox.rejected.connect(self.reject)
+        self.defaultButton.clicked.connect(self.defaultXML)
         # Botões de OK e CANCEL da TAB 2
-        self.buttonBox_2.accepted.connect(self.accept)
+        self.buttonBox_2.accepted.connect(self.okButton)
         self.buttonBox_2.rejected.connect(self.reject)
-        self.defaultButton.clicked.connect(self.myIP.redo)
+        self.defaultButtonTab2.clicked.connect(self.defaultXML)
+        # COPY
         self.buttonBox.accepted.connect(self.myIP.copy)
         self.buttonBox.accepted.connect(self.masterIP.copy)
         self.buttonBox.accepted.connect(self.hostname.copy)
@@ -215,6 +228,12 @@ class laserSettings(QDialog):
         self.buttonBox.accepted.connect(self.user.copy)
         self.buttonBox.accepted.connect(self.password.copy)
         self.buttonBox.accepted.connect(self.port.copy)
+        self.buttonBox.accepted.connect(self.masterURI.copy)
+        self.buttonBox_2.accepted.connect(self.perspective.copy)
+        self.buttonBox_2.accepted.connect(self.rosSource.copy)
+        self.buttonBox_2.accepted.connect(self.rosETCDirectory.copy)
+        self.buttonBox_2.accepted.connect(self.rosRoot.copy)
+        # RESET
         self.defaultButton.clicked.connect(self.masterIP.redo)
         self.defaultButton.clicked.connect(self.hostname.redo)
         self.defaultButton.clicked.connect(self.nameSpace.redo)
@@ -222,11 +241,6 @@ class laserSettings(QDialog):
         self.defaultButton.clicked.connect(self.user.redo)
         self.defaultButton.clicked.connect(self.password.redo)
         self.tabbedConfig.currentChanged['int'].connect(self.port.redo)
-        self.buttonBox.accepted.connect(self.masterURI.copy)
-        self.buttonBox_2.accepted.connect(self.perspective.copy)
-        self.buttonBox_2.accepted.connect(self.rosSource.copy)
-        self.buttonBox_2.accepted.connect(self.rosETCDirectory.copy)
-        self.buttonBox_2.accepted.connect(self.rosRoot.copy)
         self.defaultButtonTab2.clicked.connect(self.perspective.redo)
         self.defaultButtonTab2.clicked.connect(self.rosSource.redo)
         self.defaultButtonTab2.clicked.connect(self.rosETCDirectory.redo)
@@ -235,6 +249,108 @@ class laserSettings(QDialog):
         self.show()
         self.exec_()
 
+    def okButton(self):
+        # ENV CONFIG
+        myIPValue = self.myIP.text()
+        masterIPValue = self.masterIP.text()
+        masterURIValue = self.masterURI.text()
+        hostnameValue = self.hostname.text()
+        nameSpaceValue = self.nameSpace.text()
+        # SSH CONNECTION
+        turtlebotIPValue = self.turtlebotIP.text()
+        userValue = self.user.text()
+        passwordValue = self.password.text()
+        portValue = self.port.text()
+        # PERSPECTIVE AND OTHERS
+        perspectiveValue = self.perspective.text()
+        rosSourceValue = self.rosSource.text()
+        rosEtcDirectoryValue = self.rosETCDirectory.text()
+        rosRootValue = self.rosRoot.text()
+        # XML CREATION
+        environmentXMLFile = et.Element('environment')
+        comment = et.Comment("Python Environment and Configuration Values")
+        environmentXMLFile.append(comment)
+        environmentConfig = et.SubElement(environmentXMLFile, 'MY_IP')
+        environmentConfig.text = str(myIPValue)
+        environmentConfig = et.SubElement(environmentXMLFile, 'MASTER_IP')
+        environmentConfig.text = str(masterIPValue)
+        environmentConfig = et.SubElement(environmentXMLFile, 'ROS_MASTER_URI')
+        environmentConfig.text = str(masterURIValue)
+        environmentConfig = et.SubElement(environmentXMLFile, 'ROS_HOSTNAME')
+        environmentConfig.text = str(hostnameValue)
+        environmentConfig = et.SubElement(environmentXMLFile, 'ROS_NAMESPACE')
+        environmentConfig.text = str(nameSpaceValue)
+        environmentConfig = et.SubElement(environmentXMLFile, 'TURTLEBOT_IP')
+        environmentConfig.text = str(turtlebotIPValue)
+        environmentConfig = et.SubElement(environmentXMLFile, 'USERNAME')
+        environmentConfig.text = str(userValue)
+        environmentConfig = et.SubElement(environmentXMLFile, 'PASSWORD')
+        environmentConfig.text = str(passwordValue)
+        environmentConfig = et.SubElement(environmentXMLFile, 'PORT')
+        environmentConfig.text = str(portValue)
+        environmentConfig = et.SubElement(environmentXMLFile, 'PERSPECTIVE_LOCATION')
+        environmentConfig.text = str(perspectiveValue)
+        environmentConfig = et.SubElement(environmentXMLFile, 'ROS_SOURCE')
+        environmentConfig.text = str(rosSourceValue)
+        environmentConfig = et.SubElement(environmentXMLFile, 'ROS_ETC_DIRECTORY')
+        environmentConfig.text = str(rosEtcDirectoryValue)
+        environmentConfig = et.SubElement(environmentXMLFile, 'ROS_ROOT')
+        environmentConfig.text = str(rosRootValue)
+        tree = et.ElementTree(environmentXMLFile)
+        tree.write('environment.xml', encoding='utf8')
+        # CLOSE THE CONFIG MENU
+        self.close()
+
+    def defaultXML(self):
+        # ENV CONFIG
+        myIPValueDefault = '150.165.167.105'
+        masterIPValueDefault = str(myIPValueDefault)
+        masterURIValueDefault = str('"http://'+masterIPValueDefault+':11311"')
+        hostnameValueDefault = str(myIPValueDefault)
+        nameSpaceValueDefault = str('"robot_0"')
+        # SSH CONNECTION
+        turtlebotIPValueDefault = str(myIPValueDefault)
+        userValueDefault = 'turtlebot'
+        passwordValueDefault = 'turtlebot'
+        portValueDefault = '22'
+        # PERSPECTIVE AND OTHERS
+        perspectiveValueDefault = self.perspective.text()
+        rosSourceValueDefault = self.rosSource.text()
+        rosEtcDirectoryValueDefault = self.rosETCDirectory.text()
+        rosRootValueDefault = self.rosRoot.text()
+        environmentXMLFile = et.Element('environment')
+        comment = et.Comment("Python Environment and Configuration Values")
+        environmentXMLFile.append(comment)
+        environmentConfig = et.SubElement(environmentXMLFile, 'MY_IP')
+        environmentConfig.text = str(myIPValueDefault)
+        environmentConfig = et.SubElement(environmentXMLFile, 'MASTER_IP')
+        environmentConfig.text = str(masterIPValueDefault)
+        environmentConfig = et.SubElement(environmentXMLFile, 'ROS_MASTER_URI')
+        environmentConfig.text = str(masterURIValueDefault)
+        environmentConfig = et.SubElement(environmentXMLFile, 'ROS_HOSTNAME')
+        environmentConfig.text = str(hostnameValueDefault)
+        environmentConfig = et.SubElement(environmentXMLFile, 'ROS_NAMESPACE')
+        environmentConfig.text = str(nameSpaceValueDefault)
+        environmentConfig = et.SubElement(environmentXMLFile, 'TURTLEBOT_IP')
+        environmentConfig.text = str(turtlebotIPValueDefault)
+        environmentConfig = et.SubElement(environmentXMLFile, 'USERNAME')
+        environmentConfig.text = str(userValueDefault)
+        environmentConfig = et.SubElement(environmentXMLFile, 'PASSWORD')
+        environmentConfig.text = str(passwordValueDefault)
+        environmentConfig = et.SubElement(environmentXMLFile, 'PORT')
+        environmentConfig.text = str(portValueDefault)
+        environmentConfig = et.SubElement(environmentXMLFile, 'PERSPECTIVE_LOCATION')
+        environmentConfig.text = str(perspectiveValueDefault)
+        environmentConfig = et.SubElement(environmentXMLFile, 'ROS_SOURCE')
+        environmentConfig.text = str(rosSourceValueDefault)
+        environmentConfig = et.SubElement(environmentXMLFile, 'ROS_ETC_DIRECTORY')
+        environmentConfig.text = str(rosEtcDirectoryValueDefault)
+        environmentConfig = et.SubElement(environmentXMLFile, 'ROS_ROOT')
+        environmentConfig.text = str(rosRootValueDefault)
+        tree = et.ElementTree(environmentXMLFile)
+        tree.write('environment.xml', encoding='utf8')
+        self.close()
+        
     def retranslateUi(self, envConfigDialog):
         _translate = QtCore.QCoreApplication.translate
         envConfigDialog.setWindowTitle(_translate("envConfigDialog", "Settings"))
@@ -278,5 +394,5 @@ if __name__ == "__main__":
     config.show()
     sys.exit(app.exec_())
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

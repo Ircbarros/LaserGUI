@@ -1,18 +1,66 @@
 # Is interesting use Catkin tools
 # -*- coding: utf-8 -*-
+#!/usr/bin/env python2
 
 import webbrowser
 import sys
 import os
 import Logo_Vectors_rc
 import subprocess
+from pexpect import pxssh
+from paramiko import client
 from subprocess import call, Popen, PIPE, check_output
-import signal
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import *
+from concurrent.futures import ProcessPoolExecutor
+import threading
 from laserSettings import *
+from sshMinimalLaunch import *
+from sshRosCoreLaunch import *
+from sshTeleopLaunch import *
+from sshRvizLaunch import *
+from sshGmappLaunch import *
+from sshStop import *
 
+
+try:
+    import xml.etree.cElementTree as et
+except ImportError:
+    import xml.etree.ElementTree as et
+
+scriptPath = str(os.getcwd())
+print (scriptPath)
+# Reads the XML File
+xmlFile = et.parse('environment.xml')
+# Find the root element from the file (in this case "environment")
+root = xmlFile.getroot()
+# Load the XML values from environment file
+myIP = root.findtext('MY_IP')
+masterIP = root.findtext('MASTER_IP')
+rosMasterURI = root.findtext('ROS_MASTER_URI')
+rosHostname = root.findtext('ROS_HOSTNAME')
+rosNamespace = root.findtext('ROS_NAMESPACE')
+address = root.findtext('TURTLEBOT_IP')
+usernameClient = root.findtext('USERNAME')
+passwordClient = root.findtext('PASSWORD')
+portClient = root.findtext('PORT')
+perspectiveLocation = root.findtext('PERSPECTIVE_LOCATION')
+rosSource = root.findtext("ROS_SOURCE")
+rosEtc = root.findtext('ROS_ETC_DIRECTORY')
+rosRoot = root.findtext('ROS_ROOT')
+
+
+exportIP = str('ROS_IP='+myIP)
+exportMasterIP = str('MASTER_IP='+myIP)
+exportMasterIPURI = str('export ROS_MASTER_URI=http://$MASTER_IP:11311/')
+exportRosIP = str('export ROS_IP=$MY_IP')
+exportHostname = str('export ROS_HOSTNAME_IP=$MY_IP')
+exportNamespace = str('export ROS_NAMESPACE='+rosNamespace)
+print(exportMasterIP)
+print(exportRosIP)
+print(exportHostname)
+print(exportNamespace)
 
 class EmbTerminal(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -24,6 +72,17 @@ class EmbTerminal(QtWidgets.QWidget):
         # Works also with urxvt:
         self.process.start('urxvt', ['-embed', str(int(self.winId()))])
         self.setGeometry(90, 460, 1160, 125)
+
+# class rviz(QtWidgets.QWidget):
+#     def __init__(self, parent=None):
+#         super(rviz, self).__init__(parent)
+#         self.process = QtCore.QProcess(self)
+#         self.rvizProcess = QtWidgets.QWidget(self)
+#         layout = QtWidgets.QVBoxLayout(self)
+#         layout.addWidget(self.rvizProcess)
+#         # Works also with urxvt:
+#         self.process.start('rViz', [str(int(self.winId()))])
+#         self.setGeometry(121, 95, 940, 367)
 
 
 class InProgress(QtWidgets.QWidget):
@@ -44,19 +103,6 @@ class Homebox(QtWidgets.QWidget):
         HomeInfo.setWindowTitle("Atenção!")
         HomeInfo.show()
         HomeInfo.exec_()
-
-
-class rvizScreen(QtWidgets.QWidget):
-    def __init__(self, parent=None):
-        super(rvizScreen, self).__init__(parent)
-        self.process = QtCore.QProcess(self)
-        self.rvizScreen = QtWidgets.QWidget(self)
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.addWidget(self.rvizScreen)
-        self.process.start('rviz', ['-embed', str(int(self.winId()))])
-        # Works also with urxvt:
-        # self.process.start('rviz', ['-embed', str(int(self.winId()))])
-        # self.setGeometry(121, 120, 940, 340)
 
 
 class Ui_MainWindow(QtWidgets.QMainWindow):
@@ -120,11 +166,17 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
 
     def mainState(self):
         if (self.PlayButton.isChecked() is True):
+            # sshStart(self)
             print('Play selecionado')
+            self.PlayButton.setDown(True)
+            QTimer.singleShot(2000, lambda: self.PlayButton.setDown(False))
+            
 
         elif (self.StopButton.isChecked() is True):
             print('Stop selecionado')
-            self.RqtBagButton.setDown(True)
+            self.StopButton.setDown(True)
+            QTimer.singleShot(5000, lambda: self.StopButton.setDown(False))
+            # For localserver use this code:
             killRosNode = 'rosnode kill -a'
             killRosMaster = 'killall -9 rosmaster'
             killRosCore = 'killall -9 roscore'
@@ -142,11 +194,14 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
             print (stopCoreProcStdout, stopNodeProcStdout,
                    stopMasterProcStdout)
 
+
         elif (self.PauseButton.isChecked() is True):
             print('Pause selecionado')
 
         elif (self.JoystickButton.isChecked() is True):
             print('Joy selecionado')
+            self.JoystickButton.setDown(True)
+            QTimer.singleShot(5000, lambda: self.JoystickButton.setDown(False))
             joySelection = 'roslaunch turtlebot_teleop keyboard_teleop.launch'
             joyProcess = subprocess.Popen(joySelection, stdout=PIPE,
                                           stdin=PIPE, shell=True)
@@ -257,13 +312,13 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
         self.MailButton.setToolTip('Contact the LASER Laboratory')
         self.MailButton.clicked.connect(InProgress)
         #  Box de Simulação
-        # self.Simulation = QtWidgets.QGraphicsView(self.Base)
-        # self.Simulation.setGeometry(QtCore.QRect(121, 120, 940, 340))
-        # self.Simulation.setObjectName("Simulation")
         self.Simulation = QtWidgets.QTabWidget(self.Base)
-        self.Simulation.setGeometry(QtCore.QRect(121, 120, 940, 340))
-        self.Simulation.setTabPosition(QtWidgets.QTabWidget.South)
+        self.Simulation.setGeometry(QtCore.QRect(121, 120, 940, 367))
+        self.Simulation.setTabPosition(QtWidgets.QTabWidget.North)
         self.Simulation.setObjectName("Simulation")
+        self.SimulationFrame = QtWidgets.QWidget()
+        self.SimulationFrame.setObjectName("SimulationFrame")
+        # self.Simulation.addTab(rviz(), "rViz")
         # Botão do Logo UFPB com Link para Site
         self.UFPBButton = QtWidgets.QCommandLinkButton(self.Base)
         self.UFPBButton.setGeometry(QtCore.QRect(10, 540, 100, 50))
@@ -326,6 +381,7 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
         self.LateraLine.setFrameShape(QtWidgets.QFrame.VLine)
         self.LateraLine.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.LateraLine.setObjectName("LateraLine")
+        # Frame para o Terminal Embutido
         self.Terminal = QtWidgets.QTabWidget(self.Base)
         self.Terminal.setGeometry(QtCore.QRect(121, 462, 1160, 141))
         self.Terminal.setTabPosition(QtWidgets.QTabWidget.South)
@@ -336,6 +392,7 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
         self.Terminal.addTab(EmbTerminal(), "urvxt")
         # Final da chamada do terminal
         # Início dos Frames e Labels Graph, Tolls e Debug
+        # Início dos Frames, Labels do "GRAPH"
         self.graphSettingsFrame = QtWidgets.QFrame(self.Base)
         self.graphSettingsFrame.setGeometry(QtCore.QRect(1063, 122, 218, 30))
         self.graphSettingsFrame.setStyleSheet("background: rgba(29, 222, 216, 0.1);")
@@ -348,6 +405,25 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
                                               "font: 10pt \"Khmer OS System\";\n"
                                               "color: white;")
         self.graphSettingsLabel.setObjectName("graphSettingsLabel")
+        #  Botão para Abertura da Screen do GMAPPING
+        self.gmappButton = QtWidgets.QPushButton(self.Base)
+        self.gmappButton.setText("Open GMapping Tool")
+        self.gmappButton.move(1105, 163)
+        self.gmappButton.setStyleSheet("color: white;\n"
+                                       "background: rgba(41, 63, 71, 0.75);")
+        self.gmappButton.setObjectName("gmappButton")
+        self.gmappButton.setToolTip('Open a Laser-based SLAM 2D map')
+        # self.gmappButton.clicked.connect(gmappScreen)
+        # Botão para Abertura da Screen do RVIZ
+        self.rvizButton = QtWidgets.QPushButton(self.Base)
+        self.rvizButton.setText("Open RVIZ Tool")
+        self.rvizButton.move(1125, 190)
+        self.rvizButton.setStyleSheet("color: white;\n"
+                                       "background: rgba(41, 63, 71, 0.75);")
+        self.rvizButton.setObjectName("rvizButton")
+        self.rvizButton.setToolTip('Open the RVIZ Tool')   
+        # self.rvizButton.clicked.connect(rviz)
+        # Início dos Frames, Labels do "TOOLS"
         self.toolsFrame = QtWidgets.QFrame(self.Base)
         self.toolsFrame.setGeometry(QtCore.QRect(1063, 240, 218, 30))
         self.toolsFrame.setStyleSheet("background: rgba(29, 222, 216, 0.1);")
@@ -360,6 +436,7 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
                                       "font: 9pt \"Khmer OS System\";\n"
                                       "color: white;")
         self.toolsLabel.setObjectName("toolsLabel")
+        # Início dos Frames, Labels do "DEBUG"
         self.debugFrame = QtWidgets.QFrame(self.Base)
         self.debugFrame.setGeometry(QtCore.QRect(1063, 360, 218, 30))
         self.debugFrame.setStyleSheet("background: rgba(29, 222, 216, 0.1);")
@@ -573,6 +650,8 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
         self.MailButton.raise_()
         self.Simulation.raise_()
         self.UFPBButton.raise_()
+        self.gmappButton.raise_()
+        self.rvizButton.raise_()
         self.MonitorButton.raise_()
         self.RqtBagButton.raise_()
         self.RqtButton.raise_()
